@@ -40,9 +40,16 @@ contract WorldMultiSigV1 is Initializable {
 
     function initialize(address initialOperator) public initializer {
         WorldStorage storage s = getStorage();
-        s.WIP = msg.sender;
         s.initialOperator = initialOperator;
         s.initialOperatorExpiresAt = block.timestamp + 365 days;
+    }
+
+    function setWIP(address newWIP) public {
+        WorldStorage storage s = getStorage();
+        require(msg.sender == s.initialOperator, "msg.sender is not the initial operator");
+        require(newWIP != address(0), "newWIP is the zero address");
+        require(s.WIP == address(0), "WIP is already set");
+        s.WIP = newWIP;
     }
 
     function renounceInitialOperator() public {

@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { hashEndpointWithScope } from "@selfxyz/core";
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { MultiSig__factory, WorldMultiSigV1__factory } from "../typechain-types";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 const { deployments, getNamedAccounts } = hre;
@@ -92,23 +93,25 @@ const { deployer } = await getNamedAccounts();
     "function getAdmin() public view returns (address)",
   ];
   // Transfer upgrade rights of WIP to WorldMultiSig
-  const wipContract = new ethers.Contract(WIPDeployment.address, proxyAbi, dSigner);
-  const adminBytes = await ethers.provider.getStorage(await wipContract.getAddress(), "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
-  const adminAddress = ethers.getAddress("0x" + adminBytes.slice(26));
-  console.log("adminAddress", adminAddress);
+//   const wipContract = new ethers.Contract(WIPDeployment.address, proxyAbi, dSigner);
+//   const adminBytes = await ethers.provider.getStorage(await wipContract.getAddress(), "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
+//   const adminAddress = ethers.getAddress("0x" + adminBytes.slice(26));
+//   console.log("adminAddress", adminAddress);
 
-  const adminContract = new ethers.Contract(adminAddress, proxyAbi, dSigner);
-  await adminContract.transferOwnership(WorldMultiSigDeployment.address);
-  console.log("proxyContract ownership transferred", await adminContract.owner());
+//   const adminContract = new ethers.Contract(adminAddress, proxyAbi, dSigner);
+//   await adminContract.transferOwnership(WorldMultiSigDeployment.address);
+//   console.log("proxyContract ownership transferred", await adminContract.owner());
 
-  // Transfer upgrade rights of WorldMultiSig to WorldMultiSig Itself
-  const multiSigContract = new ethers.Contract(WorldMultiSigDeployment.address, proxyAbi, dSigner);
-  const multiSigAdminBytes = await ethers.provider.getStorage(WorldMultiSigDeployment.address, "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
-  console.log("multiSigAdminBytes", multiSigAdminBytes);
-  const multiSigAdminAddress = ethers.getAddress("0x" + multiSigAdminBytes.slice(26));
-  const multiSigProxyAdmin = new ethers.Contract(multiSigAdminAddress, proxyAbi, dSigner);
-  await multiSigProxyAdmin.transferOwnership(await multiSigContract.getAddress());
-  console.log("multiSigProxyAdmin ownership transferred", await multiSigProxyAdmin.owner());
+//   // Transfer upgrade rights of WorldMultiSig to WorldMultiSig Itself
+//   const multiSigContract = new ethers.Contract(WorldMultiSigDeployment.address, proxyAbi, dSigner);
+//   const multiSigAdminBytes = await ethers.provider.getStorage(WorldMultiSigDeployment.address, "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
+//   console.log("multiSigAdminBytes", multiSigAdminBytes);
+//   const multiSigAdminAddress = ethers.getAddress("0x" + multiSigAdminBytes.slice(26));
+//   const multiSigProxyAdmin = new ethers.Contract(multiSigAdminAddress, proxyAbi, dSigner);
+//   await multiSigProxyAdmin.transferOwnership(await multiSigContract.getAddress());
+//   console.log("multiSigProxyAdmin ownership transferred", await multiSigProxyAdmin.owner());
+  const multiSigContractImpl = WorldMultiSigV1__factory.connect(WorldMultiSigDeployment.address, dSigner);
+  await multiSigContractImpl.setWIP(WIPDeployment.address);
 
 
   console.log("WorldMultiSig deployed to:",  WorldMultiSigDeployment.address);
