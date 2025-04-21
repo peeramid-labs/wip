@@ -114,7 +114,7 @@ contract MockWIP is WIP {
         WIPStorage storage s = getWIPStorage();
 
         // Emit the Verified event
-        emit Verified(citizen, false);
+        emit Verified(citizen, expiresAt, countryName, false);
 
         // Update lastClaimed to yesterday
         s.lastClaimed[citizen] = currentDay() - 1;
@@ -161,7 +161,7 @@ contract MockWIP is WIP {
         WIPStorage storage s = getWIPStorage();
 
         // Emit the Verified event
-        emit Verified(citizen, false);
+        emit Verified(citizen, expiresAt, countryName, false);
 
         // Update lastClaimed to yesterday
         s.lastClaimed[citizen] = currentDay() - 1;
@@ -248,7 +248,7 @@ contract MockWIP is WIP {
         bytes32 UNHash = bytes32(0x0123456789ABCDFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
 
         // Emit the Verified event
-        emit Verified(citizen, false);
+        emit Verified(citizen, expiresAt, countryName, false);
 
         // Update lastClaimed to yesterday
         s.lastClaimed[citizen] = currentDay() - 1;

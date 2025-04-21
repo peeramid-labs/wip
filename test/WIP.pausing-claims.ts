@@ -168,7 +168,7 @@ describe("WIP - Claims and Pausing", function () {
     it("should only allow WorldMultiSig to change pause state", async function() {
       // Try to pause directly (not via WorldMultiSig)
       await expect(wip.connect(citizen).pause())
-        .to.be.revertedWith("only wolrdMultiSig");
+        .to.be.revertedWith("only worldMultiSig");
 
       // Pause via WorldMultiSig
       await worldMultiSig.connect(operator).pause();
@@ -176,7 +176,7 @@ describe("WIP - Claims and Pausing", function () {
 
       // Try to unpause directly (not via WorldMultiSig)
       await expect(wip.connect(citizen).unpause())
-        .to.be.revertedWith("only wolrdMultiSig");
+        .to.be.revertedWith("only worldMultiSig");
     });
   });
 });

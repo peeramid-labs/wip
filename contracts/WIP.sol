@@ -79,7 +79,6 @@ struct WIPStorage {
     Verifier verifier;
     IDistribution daoDistribution;
     mapping(bytes32 state => DAO) daos;
-    mapping(uint256 => bool) _nullifiers;
     mapping(address => PassportHolder) passportHolders;
     mapping(uint256 day => Daily) daily;
     mapping(bytes32 proposal => uint256 score) proposalScores;
@@ -128,15 +127,6 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
     }
 
     /**
-     * @notice Checks if a nullifier has been used
-     * @param nullifier The nullifier value to check
-     * @return bool True if the nullifier has been used
-     */
-    function nullifiers(uint256 nullifier) public view returns (bool) {
-        return getStorage()._nullifiers[nullifier];
-    }
-
-    /**
      * @notice Gets the total score for a proposal
      * @param proposal Hash of the proposal to query
      * @return uint256 Current score/votes for the proposal
@@ -156,6 +146,8 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
     /// @notice Amount of tokens claimable daily (64 ether)
     /// @dev Chosen as it is both square of 8 and cube of 4 for scoring calculations
     uint256 constant CLAIMABLE_AMOUNT = 64 ether;
+    uint256 constant CLAIMABLE_AMOUNT_HALF = CLAIMABLE_AMOUNT / 2;
+    uint256 constant CLAIMABLE_AMOUNT_QUARTER = CLAIMABLE_AMOUNT / 4;
 
     /// @notice Maximum score a user can allocate to a single proposal
     uint256 constant MAX_SCORE_ALLOCATION = 900000;
@@ -189,9 +181,11 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
     /**
      * @notice Event emitted when a passport is verified
      * @param citizen Address of the verified citizen
+     * @param expiresAt Timestamp when the passport expires
+     * @param issuingState String identifier of the country of citizenship
      * @param isExpired Whether the passport is expired
      */
-    event Verified(address citizen, bool isExpired);
+    event Verified(address indexed citizen, uint256 indexed expiresAt, string indexed issuingState, bool isExpired);
 
     /**
      * @notice Event emitted when a new country DAO is created
@@ -369,7 +363,7 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
             string memory issuingState,
             address citizen
         ) = Verifier(s.verifier).verifySelfProofAndReturn(proof);
-        emit Verified(citizen, isExpired);
+        emit Verified(citizen, expiresAt, issuingState, isExpired);
 
         s.lastClaimed[citizen] = currentDay() - 1;
 
@@ -385,6 +379,7 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
                 bytes memory data = abi.encode(instantiationData);
                 (address[] memory instances, , ) = s.daoDistribution.instantiate(data);
                 s.daos[issuingStateHash] = DAO(GovernanceToken(instances[0]), instances[1], 1337000 ether, 1);
+                s.worldMultiSig.addCountry(instances[1]);
                 emit NewCountryOnboarded(
                     issuingStateHash,
                     citizen,
@@ -393,20 +388,20 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
                     revealedData.issuingState
                 );
             } else {
+                s.daos[issuingStateHash].verifiedCount++;
                 uint256 onboardingCountryDrop = s.daos[issuingStateHash].bonusBase /
                     s.daos[issuingStateHash].verifiedCount;
                 if (onboardingCountryDrop > 1) {
                     GovernanceToken(s.daos[issuingStateHash].token).mint(citizen, onboardingCountryDrop);
                     emit FirstCitizenOnboarded(issuingState, onboardingCountryDrop, citizen);
                 }
-                s.daos[issuingStateHash].verifiedCount++;
             }
+            s.daos[UNHash].verifiedCount++;
             uint256 UNOnboardingDrop = s.daos[UNHash].bonusBase / s.daos[UNHash].verifiedCount;
             if (UNOnboardingDrop > 1) {
                 GovernanceToken(s.daos[UNHash].token).mint(citizen, UNOnboardingDrop);
                 emit GlobalCitizenOnboarded("United Nations", UNOnboardingDrop, citizen);
             }
-            s.daos[UNHash].verifiedCount++;
 
             s.passportHolders[citizen] = PassportHolder({
                 citizenship: revealedData.issuingState,
@@ -424,7 +419,7 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
      */
     function pause() public {
         WIPStorage storage s = getStorage();
-        require(msg.sender == address(s.worldMultiSig), "only wolrdMultiSig");
+        require(msg.sender == address(s.worldMultiSig), "only worldMultiSig");
         _pause();
     }
 
@@ -434,7 +429,7 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
      */
     function unpause() public {
         WIPStorage storage s = getStorage();
-        require(msg.sender == address(s.worldMultiSig), "only wolrdMultiSig");
+        require(msg.sender == address(s.worldMultiSig), "only worldMultiSig");
         _unpause();
     }
 
@@ -490,74 +485,73 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
         require(daysNotClaimed > 0, "Already claimed");
         s.lastClaimed[onBehalfOf] = day;
         if (proposalCntYesterday > 1 || (proposalCntYesterday > 0 && daysNotClaimed > 1)) {
-            if (balance > 0) {
-                require(vote.length > 0, "No vote");
-                // Require voting
-                for (uint256 i = 0; i < vote.length; i++) {
-                    VoteElement memory voteElement = vote[i];
-                    {
-                        bool proposalExists = s.daily[day - 1].proposals[voteElement.proposal].exists;
-                        require(proposalExists, "Proposal is not in daily menu :(");
-                    }
-                    require(voteElement.scoresGiven <= MAX_SCORE_ALLOCATION, "Score allocation exceeds maximum");
-                    address proposer = s.daily[day - 1].proposals[voteElement.proposal].proposer;
-                    require(proposer != onBehalfOf, "You cannot vote for yourself");
-                    string memory proposerCitizenship = s.passportHolders[proposer].citizenship;
-                    {
-                        bytes32 proposerCountry = keccak256(bytes(proposerCitizenship));
-                        uint256 value = 0;
-                        if (citizenshipHash == proposerCountry) {
-                            value += voteElement.scoresGiven * voteElement.scoresGiven;
-                        } else {
-                            require(
-                                voteElement.scoresGiven > 3,
-                                "Cross-country votes require committing at least 4 points"
-                            );
-                            value += voteElement.scoresGiven * voteElement.scoresGiven * voteElement.scoresGiven;
-                        }
-                        spent += value;
-                        require(spent * 1 ether <= balance, "Not enough balance");
-                        s.proposalScores[voteElement.proposal] += value;
-                        emit ProposalScoreUpdatedByCountry(value, day, citizenshipHash, voteElement.proposal);
-                        emit ProposalScoreUpdatedByAddress(value, day, proposer, voteElement.proposal);
-                        {
-                            uint256 decimals = GovernanceToken(s.daos[proposerCountry].token).decimals();
-                            GovernanceToken(s.daos[proposerCountry].token).mint(
-                                proposer,
-                                voteElement.scoresGiven * 10 ** decimals
-                            );
-                        }
-                        {
-                            uint256 decimals = GovernanceToken(s.daos[UNHash].token).decimals();
-                            GovernanceToken(s.daos[UNHash].token).mint(
-                                proposer,
-                                (voteElement.scoresGiven * 10 ** decimals * s.daos[proposerCountry].verifiedCount) /
-                                    s.daos[UNHash].verifiedCount
-                            );
-                        }
-                    }
-                    {
-                        emit VotingByAddress(
-                            onBehalfOf,
-                            day,
-                            voteElement.proposal,
-                            citizenship,
-                            proposerCitizenship,
-                            voteElement.scoresGiven
+            require(balance >= CLAIMABLE_AMOUNT_HALF, "You must have at least 32 WIP to spend to claim 64 WIP");
+            require(vote.length > 0, "No vote");
+            // Require voting
+            for (uint256 i = 0; i < vote.length; i++) {
+                VoteElement memory voteElement = vote[i];
+                {
+                    bool proposalExists = s.daily[day - 1].proposals[voteElement.proposal].exists;
+                    require(proposalExists, "Proposal is not in daily menu :(");
+                }
+                require(voteElement.scoresGiven <= MAX_SCORE_ALLOCATION, "Score allocation exceeds maximum");
+                address proposer = s.daily[day - 1].proposals[voteElement.proposal].proposer;
+                require(proposer != onBehalfOf, "You cannot vote for yourself");
+                string memory proposerCitizenship = s.passportHolders[proposer].citizenship;
+                {
+                    bytes32 proposerCountry = keccak256(bytes(proposerCitizenship));
+                    uint256 value = 0;
+                    if (citizenshipHash == proposerCountry) {
+                        value += voteElement.scoresGiven * voteElement.scoresGiven;
+                    } else {
+                        require(
+                            voteElement.scoresGiven > 3,
+                            "Cross-country votes require committing at least 4 points"
                         );
-                        emit VotingByCountry(
-                            citizenshipHash,
-                            day,
-                            voteElement.proposal,
-                            onBehalfOf,
+                        value += voteElement.scoresGiven * voteElement.scoresGiven * voteElement.scoresGiven;
+                    }
+                    spent += value;
+                    require(spent * 1 ether <= balance, "Not enough balance");
+                    s.proposalScores[voteElement.proposal] += value;
+                    emit ProposalScoreUpdatedByCountry(value, day, citizenshipHash, voteElement.proposal);
+                    emit ProposalScoreUpdatedByAddress(value, day, proposer, voteElement.proposal);
+                    {
+                        uint256 decimals = GovernanceToken(s.daos[proposerCountry].token).decimals();
+                        GovernanceToken(s.daos[proposerCountry].token).mint(
                             proposer,
-                            proposerCitizenship,
-                            voteElement.scoresGiven
+                            voteElement.scoresGiven * 10 ** decimals
+                        );
+                    }
+                    {
+                        uint256 decimals = GovernanceToken(s.daos[UNHash].token).decimals();
+                        GovernanceToken(s.daos[UNHash].token).mint(
+                            proposer,
+                            (voteElement.scoresGiven * 10 ** decimals * s.daos[proposerCountry].verifiedCount) /
+                                s.daos[UNHash].verifiedCount
                         );
                     }
                 }
-                require((spent * 1 ether) > CLAIMABLE_AMOUNT / 2, "you must spend at least half of your daily balance");
+                {
+                    emit VotingByAddress(
+                        onBehalfOf,
+                        day,
+                        voteElement.proposal,
+                        citizenship,
+                        proposerCitizenship,
+                        voteElement.scoresGiven
+                    );
+                    emit VotingByCountry(
+                        citizenshipHash,
+                        day,
+                        voteElement.proposal,
+                        onBehalfOf,
+                        proposer,
+                        proposerCitizenship,
+                        voteElement.scoresGiven
+                    );
+                }
             }
+            require((spent * 1 ether) >= CLAIMABLE_AMOUNT_HALF, "you must spend at least half of your daily balance");
         } else {
             uint256 daysWithoutProposal = day - s.lastProposalDay;
             if (daysWithoutProposal > 1) {
@@ -588,7 +582,7 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
         _burn(onBehalfOf, spent * 1 ether);
         // This is done to enshrine active voting, if you want to disappear for a while, you can do it
         // but it's not worth to try sniping a good day.
-        uint256 accumulatedCoins = daysNotClaimed > 7 ? daysNotClaimed * CLAIMABLE_AMOUNT : 0;
+        uint256 accumulatedCoins = daysNotClaimed > 1 ? ((daysNotClaimed - 1) * CLAIMABLE_AMOUNT_QUARTER) : 0;
         _mint(onBehalfOf, CLAIMABLE_AMOUNT + accumulatedCoins);
         uint256 scoreWhenProposed = s.proposalScores[newProposalHash];
         emit ProposingByAddress(onBehalfOf, day, newProposalHash, newProposal, scoreWhenProposed);
@@ -670,5 +664,15 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
         delete s.passportHolders[msg.sender].isQualified;
 
         emit WalletChanged(msg.sender, newWallet);
+    }
+
+    function daysSinceLastClaim(address account) public view returns (uint256) {
+        WIPStorage storage s = getStorage();
+        return currentDay() - s.lastClaimed[account];
+    }
+
+    function getHolderInfo(address account) public view returns (PassportHolder memory) {
+        WIPStorage storage s = getStorage();
+        return s.passportHolders[account];
     }
 }

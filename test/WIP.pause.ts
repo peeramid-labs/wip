@@ -86,13 +86,13 @@ describe("WIP - Pause/Unpause", function () {
   it("should reject pause attempts from non-authorized addresses", async function() {
     // Try to pause from a non-authorized account (citizen1)
     await expect(wip.connect(citizen1Signer).pause())
-      .to.be.revertedWith("only wolrdMultiSig");
+      .to.be.revertedWith("only worldMultiSig");
   });
 
   it("should reject unpause attempts from non-authorized addresses", async function() {
     // Try to unpause from a non-authorized account (citizen1)
     await expect(wip.connect(citizen1Signer).unpause())
-      .to.be.revertedWith("only wolrdMultiSig");
+      .to.be.revertedWith("only worldMultiSig");
   });
 
   it("should allow authorized address to pause and unpause", async function() {

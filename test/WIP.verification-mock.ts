@@ -109,7 +109,7 @@ describe("WIP - Verification Coverage Tests", function () {
         futureTimestamp
       ))
         .to.emit(mockWIP, "Verified")
-        .withArgs(citizen1Signer.address, false);
+        .withArgs(citizen1Signer.address, futureTimestamp, "CountryA", false);
 
       // Check if the passport holder data was set correctly
       const passportData = await mockWIP.passportHolders(citizen1Signer.address);

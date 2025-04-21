@@ -110,7 +110,7 @@ describe("WIP - Basic Claims", function () {
     });
 
     it("should only allow WorldMultiSig to pause", async function() {
-      await expect(wip.pause()).to.be.revertedWith("only wolrdMultiSig");
+      await expect(wip.pause()).to.be.revertedWith("only worldMultiSig");
     });
 
     it("should only allow WorldMultiSig to unpause", async function() {
@@ -119,7 +119,7 @@ describe("WIP - Basic Claims", function () {
       expect(await wip.paused()).to.be.true;
 
       // Try to unpause directly
-      await expect(wip.unpause()).to.be.revertedWith("only wolrdMultiSig");
+      await expect(wip.unpause()).to.be.revertedWith("only worldMultiSig");
 
       // Unpause using WorldMultiSig
       await worldMultiSig.connect(operator).unpause();

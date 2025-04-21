@@ -92,10 +92,6 @@ describe("WIP - Essential Functions", function () {
       expect(score).to.equal(0);
     });
 
-    it("should correctly report nullifiers state", async function() {
-      const nullifier = 12345;
-      expect(await wip.nullifiers(nullifier)).to.equal(false);
-    });
 
     it("should correctly report daoDistribution", async function() {
       expect(await wip.daoDistribution()).to.equal(await mockDistribution.getAddress());
