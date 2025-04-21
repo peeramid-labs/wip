@@ -34,6 +34,8 @@ const { deployer } = await getNamedAccounts();
     ],
   });
 
+
+
   const DAODistributionDeployment = await deployments.deploy('DAODistribution', {
     from: deployer,
     skipIfAlreadyDeployed: true,
@@ -55,53 +57,63 @@ const { deployer } = await getNamedAccounts();
     args: [identityVerificationHub,
         scope, attestationId, olderThanEnabled, olderThan, forbiddenCountriesEnabled, forbiddenCountriesListPacked, ofacEnabled],
   });
-
+  const dSigner = await ethers.getSigner(deployer);
   const WorldMultiSigDeployment = await deployments.deploy('WorldMultiSigV1', {
     from: deployer,
     skipIfAlreadyDeployed: true,
+    args: [false],
+    proxy: {
+      proxyContract: 'TransparentUpgradeableProxy',
+      execute: {
+        methodName: 'initialize',
+        args: [deployer],
+      },
+    },
 
   });
-
-
 
   const WIPDeployment = await deployments.deploy('WIP', {
     from: deployer,
     skipIfAlreadyDeployed: true,
+    args: [false],
+    proxy: {
+    proxyContract: 'TransparentUpgradeableProxy',
+      execute: {
+        methodName: 'initialize',
+        args: [VerifierDeployment.address, DAODistributionDeployment.address, WorldMultiSigDeployment.address],
+      },
+    },
   });
 
-  const WorldDistributionDeployment = await deployments.deploy('WorldDistribution', {
-    from: deployer,
-    skipIfAlreadyDeployed: true,
-    args: [
-      DAODistributionDeployment.address,
-      VerifierDeployment.address,
-      WIPDeployment.address,
-      WorldMultiSigDeployment.address,
-      "Self-WIP-1",
-      {
-        major: 1,
-        minor: 0,
-        patch: 0,
-      }
-    ]
-  });
+  const proxyAbi = [
+    "function transferOwnership(address newOwner) public",
+    "function renounceOwnership() public",
+    "function owner() public view returns (address)",
+    "function getAdmin() public view returns (address)",
+  ];
+  // Transfer upgrade rights of WIP to WorldMultiSig
+  const wipContract = new ethers.Contract(WIPDeployment.address, proxyAbi, dSigner);
+  const adminBytes = await ethers.provider.getStorage(await wipContract.getAddress(), "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
+  const adminAddress = ethers.getAddress("0x" + adminBytes.slice(26));
+  console.log("adminAddress", adminAddress);
 
-  console.log("WorldDistribution deployed to:", WorldDistributionDeployment.address);
+  const adminContract = new ethers.Contract(adminAddress, proxyAbi, dSigner);
+  await adminContract.transferOwnership(WorldMultiSigDeployment.address);
+  console.log("proxyContract ownership transferred", await adminContract.owner());
 
-  const dSigner = await ethers.getSigner(deployer);
-  const distr = new ethers.Contract(WorldDistributionDeployment.address,
-    WorldDistributionDeployment.abi, dSigner);
+  // Transfer upgrade rights of WorldMultiSig to WorldMultiSig Itself
+  const multiSigContract = new ethers.Contract(WorldMultiSigDeployment.address, proxyAbi, dSigner);
+  const multiSigAdminBytes = await ethers.provider.getStorage(WorldMultiSigDeployment.address, "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
+  console.log("multiSigAdminBytes", multiSigAdminBytes);
+  const multiSigAdminAddress = ethers.getAddress("0x" + multiSigAdminBytes.slice(26));
+  const multiSigProxyAdmin = new ethers.Contract(multiSigAdminAddress, proxyAbi, dSigner);
+  await multiSigProxyAdmin.transferOwnership(await multiSigContract.getAddress());
+  console.log("multiSigProxyAdmin ownership transferred", await multiSigProxyAdmin.owner());
 
- console.log('instantiating...')
 
-  const receipt = await (distr["instantiate(bytes)"]("0x").then(tx => tx.wait()));
-  const InstantiateWorldEvent = receipt.logs.find((log: any) => log.topics[0].toLowerCase() == '0x96522718d431f2488e2e2c2abbed5efd4df39981794fc6912ffa13be6046310d'.toLowerCase())
-    console.log("InstantiateWorldEvent", InstantiateWorldEvent);
-    const worldMultiSig = InstantiateWorldEvent.topics[1];
-  const WIP = InstantiateWorldEvent.topics[2];
-  console.log("WorldMultiSig deployed to:",  ethers.getAddress( "0x" +worldMultiSig.slice(-40)));
-  console.log("WIP deployed to:", ethers.getAddress( "0x" +WIP.slice(-40)));
-  const verify = await new ethers.Contract(ethers.getAddress( "0x" +WIP.slice(-40)), WIPDeployment.abi, dSigner)['worldMultiSig()']();
+  console.log("WorldMultiSig deployed to:",  WorldMultiSigDeployment.address);
+  console.log("WIP deployed to:", WIPDeployment.address);
+  const verify = await new ethers.Contract(WIPDeployment.address, WIPDeployment.abi, dSigner)['worldMultiSig()']();
   console.log("verify", verify);
 
 }

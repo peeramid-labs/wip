@@ -20,7 +20,7 @@ describe("MockWIP - Basic Functionality", function () {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    const worldMultiSig = await WorldMultiSigFactory.deploy();
+    const worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy MockWIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -40,8 +40,7 @@ describe("MockWIP - Basic Functionality", function () {
     await mockWIP.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      signers[0].address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig
@@ -162,7 +161,7 @@ describe("WIP - Wallet Change Fix", function () {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy MockWIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -185,8 +184,7 @@ describe("WIP - Wallet Change Fix", function () {
     await mockWIP.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      deployerSigner.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig

@@ -40,7 +40,7 @@ describe("WIP - Batch Claims", function () {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy MockWIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -64,7 +64,6 @@ describe("WIP - Batch Claims", function () {
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
       await worldMultiSig.getAddress(),
-      deployerSigner.address
     );
 
     // Setup mock WorldMultiSig

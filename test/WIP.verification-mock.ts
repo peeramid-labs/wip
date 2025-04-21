@@ -51,7 +51,7 @@ describe("WIP - Verification Coverage Tests", function () {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy WIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -75,8 +75,7 @@ describe("WIP - Verification Coverage Tests", function () {
     await mockWIP.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      deployerSigner.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig
@@ -533,7 +532,7 @@ describe("WIP - Authorization Testing", function() {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    const worldMultiSig = await WorldMultiSigFactory.deploy();
+    const worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy MockWIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -555,8 +554,7 @@ describe("WIP - Authorization Testing", function() {
     await mockWIP.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      signers[0].address
+      await worldMultiSig.getAddress()
     );
 
     return { mockWIP, mockVerifier, mockDistribution, mockGovernanceToken, worldMultiSig };

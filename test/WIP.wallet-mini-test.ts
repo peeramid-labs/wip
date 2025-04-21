@@ -16,7 +16,7 @@ describe("WIP - Wallet Change Coverage Test", function () {
   beforeEach(async function() {
     // Deploy a standard WIP contract to test
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
+    wip = await WIPFactory.deploy(true);
 
     // Deploy mock contracts for testing
     const MockVerifierFactory = await ethers.getContractFactory("MockVerifier");
@@ -27,7 +27,7 @@ describe("WIP - Wallet Change Coverage Test", function () {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Get signers
     const signers = await ethers.getSigners();
@@ -48,8 +48,7 @@ describe("WIP - Wallet Change Coverage Test", function () {
     await wip.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      deployerSigner.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig

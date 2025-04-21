@@ -1,6 +1,6 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, getNamedAccounts } from "hardhat";
 
 describe("WIP - Basic Claims", function () {
   let wip: any;
@@ -30,17 +30,19 @@ describe("WIP - Basic Claims", function () {
 
     // Deploy WorldMultiSig first
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
+
 
     // Deploy WIP
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
-
+    wip = await WIPFactory.deploy(true);
+    const { deployer } = await getNamedAccounts();
     // Get signers
     const signers = await ethers.getSigners();
-    deployerSigner = signers[0];
-    operator = signers[1];
+    deployerSigner = await ethers.getSigner(deployer);
+    operator = await ethers.getSigner(deployer);
 
+    await worldMultiSig.initialize(deployerSigner.address);
     // Setup mock distribution instances
     const mockGovernanceTokenFactory = await ethers.getContractFactory("MockGovernanceToken");
     const mockGovernanceToken = await mockGovernanceTokenFactory.deploy();
@@ -53,8 +55,7 @@ describe("WIP - Basic Claims", function () {
     await wip.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      operator.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig

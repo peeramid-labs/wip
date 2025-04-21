@@ -1,6 +1,6 @@
 import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, getNamedAccounts } from "hardhat";
 import { BigNumber } from "@ethersproject/bignumber";
 
 describe("WIP - Claims and Pausing", function () {
@@ -44,16 +44,18 @@ describe("WIP - Claims and Pausing", function () {
 
     // Deploy WorldMultiSig first
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
+    const { deployer } = await getNamedAccounts();
+    await worldMultiSig.initialize(deployer);
 
     // Deploy WIP
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
+    wip = await WIPFactory.deploy(true);
 
     // Get signers
     const signers = await ethers.getSigners();
     deployerSigner = signers[0];
-    operator = signers[1];
+    operator = await ethers.getSigner(deployer);
     citizen = signers[2];
 
     // Setup mock distribution instances
@@ -66,8 +68,7 @@ describe("WIP - Claims and Pausing", function () {
     await wip.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      operator.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig

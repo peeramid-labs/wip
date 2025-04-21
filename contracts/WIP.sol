@@ -299,8 +299,10 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
      * @notice Constructor
      * @dev Intentionally empty as initialization happens in initialize()
      */
-    constructor() {
-        // _disableInitializers();
+    constructor(bool isTest) {
+        if (!isTest) {
+            _disableInitializers();
+        }
     }
 
     bytes32 constant UNHash = bytes32(0x0123456789ABCDFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF);
@@ -311,20 +313,13 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
      * @param verifier Address of the passport verification contract
      * @param _daoDistribution Address of the DAO distribution contract
      * @param _worldMultiSig Address of the WorldMultiSig contract
-     * @param initialOperator Address with initial control of the WorldMultiSig
      */
-    function initialize(
-        address verifier,
-        address _daoDistribution,
-        address _worldMultiSig,
-        address initialOperator
-    ) public initializer {
+    function initialize(address verifier, address _daoDistribution, address _worldMultiSig) public initializer {
         __ERC20_init("WIP", "WIP");
         __ReentrancyGuard_init();
         require(verifier != address(0), "Verifier is required");
         require(_daoDistribution != address(0), "DAO distribution is required");
         require(_worldMultiSig != address(0), "WorldMultiSig is required");
-        require(initialOperator != address(0), "Initial operator is required");
         __Pausable_init();
 
         InstantiationData memory instantiationData = InstantiationData({
@@ -341,8 +336,6 @@ contract WIP is ERC20BurnableUpgradeable, ReentrancyGuardUpgradeable, PausableUp
         s.lastProposalDay = currentDay() - 1;
         (address[] memory instances, , ) = s.daoDistribution.instantiate(data);
         s.daos[UNHash] = DAO(GovernanceToken(instances[0]), instances[1], 1337000 ether, 1);
-        WorldMultiSigV1(payable(address(_worldMultiSig))).initializeByWIP(initialOperator);
-        require(s.worldMultiSig.getWIP() == address(this), "WorldMultiSig is not controlled by the WIP");
         emit NewCountryOnboarded(UNHash, tx.origin, instances[0], instances[1], "United Nations");
     }
 

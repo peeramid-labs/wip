@@ -17,41 +17,50 @@ describe("WorldMultiSig", function () {
   let country2Signer: any;
   let country3Signer: any;
   let recipientSigner: any;
+  let mockWIP: any;
 
   async function deployWorldMultiSigFixture() {
     // Get signers
-    const [_ownerSigner, _initialOperatorSigner, _country1Signer, _country2Signer, _country3Signer, _recipientSigner] = await ethers.getSigners();
+    const [deployerSigner, initialOpSigner, country1Sign, country2Sign, country3Sign, recipSign] = await ethers.getSigners();
 
-    // Setup addresses
-    owner = _ownerSigner.address;
-    initialOperator = _initialOperatorSigner.address;
-    country1 = _country1Signer.address;
-    country2 = _country2Signer.address;
-    country3 = _country3Signer.address;
-    recipient = _recipientSigner.address;
+    // Set up addresses
+    owner = deployerSigner.address;
+    initialOperator = initialOpSigner.address;
+    country1 = country1Sign.address;
+    country2 = country2Sign.address;
+    country3 = country3Sign.address;
+    recipient = recipSign.address;
 
     // Store signers
-    ownerSigner = _ownerSigner;
-    initialOperatorSigner = _initialOperatorSigner;
-    country1Signer = _country1Signer;
-    country2Signer = _country2Signer;
-    country3Signer = _country3Signer;
-    recipientSigner = _recipientSigner;
+    ownerSigner = deployerSigner;
+    initialOperatorSigner = initialOpSigner;
+    country1Signer = country1Sign;
+    country2Signer = country2Sign;
+    country3Signer = country3Sign;
+    recipientSigner = recipSign;
 
-    // Deploy WorldMultiSigV1
+    // Deploy the WIP contract first (mock)
+    const MockWIPFactory = await ethers.getContractFactory("MockWIP");
+    mockWIP = await MockWIPFactory.deploy();
+
+    // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("WorldMultiSigV1");
-    const worldMultiSig = await WorldMultiSigFactory.deploy();
+    const worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
-    // Initialize the WorldMultiSig
-    await worldMultiSig.initializeByWIP(initialOperator);
+    // Initialize WorldMultiSig with the operator address
+    await worldMultiSig.initialize(initialOperator);
 
-    return { worldMultiSig };
+    // Setup mock WIP to recognize WorldMultiSig (using the correct mock method name)
+    await mockWIP.setWorldMultiSig(await worldMultiSig.getAddress());
+
+    return { worldMultiSig, mockWIP };
   }
 
   beforeEach(async function () {
     // Deploy fresh instances for each test
-    const { worldMultiSig: _worldMultiSig } = await loadFixture(deployWorldMultiSigFixture);
+    const { worldMultiSig: _worldMultiSig, mockWIP: _mockWIP } = await loadFixture(deployWorldMultiSigFixture);
     worldMultiSig = _worldMultiSig;
+    mockWIP = _mockWIP;
 
     // Add countries to multisig
     await worldMultiSig.addCountry(country1);

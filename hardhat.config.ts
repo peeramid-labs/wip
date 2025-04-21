@@ -10,10 +10,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
-        details: {
-          yul: false,
-        },
+        runs: 20000,
       },
       metadata: {
         bytecodeHash: "none",
@@ -37,6 +34,12 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   networks: {
+    hardhat: {
+        accounts: {
+            mnemonic: "casual vacant letter raw trend tool vacant opera buzz jaguar bridge myself",
+            count: 150,
+        },
+    },
     localhost: {
       url: "http://127.0.0.1:8545",
       accounts: {

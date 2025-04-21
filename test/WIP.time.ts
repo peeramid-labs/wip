@@ -19,11 +19,11 @@ describe("WIP - Time Functionality", function () {
 
     // Deploy WorldMultiSig first
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy WIP
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
+    wip = await WIPFactory.deploy(true);
 
     // Get signers
     const [deployerSigner, initialOperatorSigner] = await ethers.getSigners();
@@ -43,8 +43,7 @@ describe("WIP - Time Functionality", function () {
     await wip.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      initialOperator
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig

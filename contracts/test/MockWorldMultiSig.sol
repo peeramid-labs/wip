@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 /**
  * @title MockWorldMultiSig
  * @dev Mock implementation of the WorldMultiSig contract for testing
  */
-contract MockWorldMultiSig {
+contract MockWorldMultiSig is Initializable {
     address public wip;
     address public operator;
     mapping(address => bool) public authorizedPausers;
     bool public pausingEnabled;
     bool public isTestMode;
+
+    constructor(bool isTest) {
+        if (!isTest) {
+            _disableInitializers();
+        }
+    }
 
     function mockSetWIP(address _wip) external {
         wip = _wip;
@@ -33,7 +41,7 @@ contract MockWorldMultiSig {
         return wip;
     }
 
-    function initializeByWIP(address _operator) external {
+    function initialize(address _operator) external initializer {
         require(operator == address(0), "Already initialized");
         operator = _operator;
         wip = msg.sender;

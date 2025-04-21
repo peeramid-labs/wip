@@ -107,11 +107,11 @@ describe("WIP", function () {
 
     // Deploy WorldMultiSig first
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy WIP
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
+    wip = await WIPFactory.deploy(true);
 
     // Deploy mock governance token
     mockGovernanceToken = await MockGovernanceToken.deploy();
@@ -144,8 +144,7 @@ describe("WIP", function () {
       await wip.initialize(
         await mockVerifier.getAddress(),
         await mockDistribution.getAddress(),
-        await worldMultiSig.getAddress(),
-        initialOperator
+        await worldMultiSig.getAddress()
       );
 
       // Setup mock WorldMultiSig
@@ -248,8 +247,7 @@ describe("WIP", function () {
       await expect(wip.initialize(
         await mockVerifier.getAddress(),
         await mockDistribution.getAddress(),
-        await worldMultiSig.getAddress(),
-        initialOperator
+        await worldMultiSig.getAddress()
       )).to.be.reverted; // Should be reverted with InvalidInitialization
     });
   });
@@ -544,36 +542,27 @@ describe("WIP", function () {
     it("should revert initialization with zero addresses", async function() {
       // Deploy a new contract
       const WIPFactory = await ethers.getContractFactory("WIP");
-      const newWip = await WIPFactory.deploy();
+      const newWip = await WIPFactory.deploy(true);
 
       // Try to initialize with null addresses
       await expect(newWip.initialize(
         ethers.ZeroAddress,
         await mockDistribution.getAddress(),
-        await worldMultiSig.getAddress(),
-        initialOperator
+        await worldMultiSig.getAddress()
       )).to.be.revertedWith("Verifier is required");
 
       await expect(newWip.initialize(
         await mockVerifier.getAddress(),
         ethers.ZeroAddress,
-        await worldMultiSig.getAddress(),
-        initialOperator
+        await worldMultiSig.getAddress()
       )).to.be.revertedWith("DAO distribution is required");
 
       await expect(newWip.initialize(
         await mockVerifier.getAddress(),
         await mockDistribution.getAddress(),
-        ethers.ZeroAddress,
-        initialOperator
+        ethers.ZeroAddress
       )).to.be.revertedWith("WorldMultiSig is required");
 
-      await expect(newWip.initialize(
-        await mockVerifier.getAddress(),
-        await mockDistribution.getAddress(),
-        await worldMultiSig.getAddress(),
-        ethers.ZeroAddress
-      )).to.be.revertedWith("Initial operator is required");
     });
   });
 });

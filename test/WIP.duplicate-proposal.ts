@@ -23,7 +23,7 @@ describe("WIP - Duplicate Proposal Testing", function() {
 
     // Deploy WorldMultiSig
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    const worldMultiSig = await WorldMultiSigFactory.deploy();
+    const worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy MockWIP
     const MockWIPFactory = await ethers.getContractFactory("MockWIP");
@@ -45,8 +45,7 @@ describe("WIP - Duplicate Proposal Testing", function() {
     await mockWIP.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      signers[0].address
+      await worldMultiSig.getAddress()
     );
 
     return { mockWIP, mockVerifier, mockDistribution, mockGovernanceToken, worldMultiSig };

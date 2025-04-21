@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "hardhat/console.sol";
 struct WorldStorage {
     address[] countries;
     mapping(address => bool) isCountry;
@@ -20,6 +21,12 @@ struct WorldStorage {
  * @dev It allows InitialOperator to have authority over the contract for 365 days.
  */
 contract WorldMultiSigV1 is Initializable {
+    constructor(bool isTest) {
+        if (!isTest) {
+            _disableInitializers();
+        }
+    }
+
     function getStorage() internal pure returns (WorldStorage storage s) {
         bytes32 position = keccak256("contracts.storage.WorldMultiSig");
         assembly {
@@ -31,7 +38,7 @@ contract WorldMultiSigV1 is Initializable {
     event ExecutedTx(bytes32 indexed txHash, address indexed country, bytes returnData);
     event RevokedTx(bytes32 indexed txHash, address indexed country);
 
-    function initializeByWIP(address initialOperator) public initializer {
+    function initialize(address initialOperator) public initializer {
         WorldStorage storage s = getStorage();
         s.WIP = msg.sender;
         s.initialOperator = initialOperator;
@@ -86,16 +93,19 @@ contract WorldMultiSigV1 is Initializable {
     function execute(bytes calldata data, address destination) public {
         WorldStorage storage s = getStorage();
         bytes32 txHash = keccak256(abi.encodePacked(data, s.nonce));
-        require(s.countries.length > 0, "no countries");
+
         if (msg.sender == s.initialOperator) {
             require(block.timestamp < s.initialOperatorExpiresAt, "initial operator expired");
-        } else
+        } else {
+            require(s.countries.length > 0, "no countries");
             for (uint256 i = 0; i < s.countries.length; i++) {
                 if (s.isCountry[s.countries[i]]) {
                     require(s.whitelistedTxs[txHash][s.countries[i]], "tx is not whitelisted");
                 }
             }
+        }
         require(!s.executedTxs[txHash], "tx is already executed");
+        console.log("executing tx", address(this));
         s.nonce++;
         (bool success, bytes memory returnData) = destination.call(data);
         emit ExecutedTx(txHash, destination, returnData);

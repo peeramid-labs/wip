@@ -9,6 +9,8 @@ import "../WIP.sol";
  * This contract exposes functions for directly manipulating the WIP state for testing
  */
 contract MockWIP is WIP {
+    constructor() WIP(true) {}
+
     // We need to redefine the storage location constant from the parent class
     bytes32 private constant URIStorageStorageLocation =
         keccak256(abi.encode(uint256(keccak256("WIP.storage")) - 1)) & ~bytes32(uint256(0xff));
@@ -19,6 +21,12 @@ contract MockWIP is WIP {
         assembly {
             s.slot := position
         }
+    }
+
+    // Method to set the WorldMultiSig for testing
+    function setWorldMultiSig(address multiSig) external {
+        WIPStorage storage s = getWIPStorage();
+        s.worldMultiSig = WorldMultiSigV1(payable(multiSig));
     }
 
     // Direct storage modification methods

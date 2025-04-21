@@ -21,11 +21,11 @@ describe("WIP - Essential Functions", function () {
 
     // Deploy WorldMultiSig first
     const WorldMultiSigFactory = await ethers.getContractFactory("MockWorldMultiSig");
-    worldMultiSig = await WorldMultiSigFactory.deploy();
+    worldMultiSig = await WorldMultiSigFactory.deploy(true);
 
     // Deploy WIP
     const WIPFactory = await ethers.getContractFactory("WIP");
-    wip = await WIPFactory.deploy();
+    wip = await WIPFactory.deploy(true);
 
     // Get signers
     const signers = await ethers.getSigners();
@@ -45,8 +45,7 @@ describe("WIP - Essential Functions", function () {
     await wip.initialize(
       await mockVerifier.getAddress(),
       await mockDistribution.getAddress(),
-      await worldMultiSig.getAddress(),
-      deployerSigner.address
+      await worldMultiSig.getAddress()
     );
 
     // Setup mock WorldMultiSig
